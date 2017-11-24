@@ -1,12 +1,18 @@
+#!/usr/bin/python
+
 import multiprocessing
 import socket
 
 def handle(connection, address):
     import logging
-    logging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger("process-%r" % (address,))
+
+    process = multiprocessing.current_process()
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger("process-%r (%r)" % (process.name, process.pid,))
+
     try:
-        logger.debug("Connected %r at %r", connection, address)
+        logger.debug("Connected %r", address)
         while True:
             data = connection.recv(1024)
             if data == "":
@@ -40,12 +46,21 @@ class Server(object):
             process = multiprocessing.Process(target=handle, args=(conn, address))
             process.daemon = True
             process.start()
-            self.logger.debug("Started process %r", process)
 
 if __name__ == "__main__":
     import logging
+    import argparse
+
     logging.basicConfig(level=logging.DEBUG)
-    server = Server("0.0.0.0", 9000)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", help="port to listen on", type=int, default=9000)
+    parser.parse_args()
+    args = parser.parse_args()
+
+    port = args.port
+
+    server = Server("0.0.0.0", port)
     try:
         logging.info("Listening")
         server.start()
