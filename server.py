@@ -2,8 +2,9 @@
 
 import multiprocessing
 import socket
+import time
 
-def handle(connection, address):
+def handle(data):
     import logging
 
     process = multiprocessing.current_process()
@@ -11,21 +12,10 @@ def handle(connection, address):
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("process-%r (%r)" % (process.name, process.pid,))
 
-    try:
-        logger.debug("Connected %r", address)
-        while True:
-            data = connection.recv(1024)
-            if data == "":
-                logger.debug("Socket closed remotely")
-                break
-            logger.debug("Received data %r", data)
-            connection.sendall(data)
-            logger.debug("Sent data")
-    except:
-        logger.exception("Problem handling request")
-    finally:
-        logger.debug("Closing socket")
-        connection.close()
+    logger.debug("Received data %r", data)
+    # Real work goes here
+    time.sleep(5)
+    logger.debug("Terminating")
 
 class Server(object):
     def __init__(self, hostname, port):
@@ -42,10 +32,30 @@ class Server(object):
 
         while True:
             conn, address = self.socket.accept()
-            self.logger.debug("Got connection")
-            process = multiprocessing.Process(target=handle, args=(conn, address))
+            self.logger.debug("Connected %r", address)
+
+            try:
+                while True:
+                    data = conn.recv(1024)
+                    if data == "":
+                        self.logger.debug("Socket closed remotely")
+                        self.logger.debug("Closing socket")
+                        conn.close()
+                        break
+             
+                    self.logger.debug("Received data %r", data)
+                    conn.sendall(data)
+                    self.logger.debug("Sent data")
+            except:
+                self.logger.exception("Problem handling request")
+            finally:
+                # Doesn't hurt to close twice (just in case we got here via an exception
+                conn.close()
+
+            process = multiprocessing.Process(target=handle, args=(data,))
             process.daemon = True
             process.start()
+
 
 if __name__ == "__main__":
     import logging
