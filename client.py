@@ -14,6 +14,9 @@ try:
 
     # Receive data from the server and shut down
     received = sock.recv(1024)
+except Exception as e:
+    print "sock communication failed %s" % str(e)
+
 finally:
     sock.close()
 
