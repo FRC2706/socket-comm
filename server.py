@@ -29,6 +29,7 @@ class Server(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.hostname, self.port))
         self.socket.listen(1)
+        self.data = ""
 
         while True:
             conn, address = self.socket.accept()
@@ -43,18 +44,22 @@ class Server(object):
                         conn.close()
                         break
              
-                    self.logger.debug("Received data %r", data)
+                    self.logger.debug("Received data %r", self.data)
                     conn.sendall(data)
                     self.logger.debug("Sent data")
+                    self.data = data
             except:
                 self.logger.exception("Problem handling request")
             finally:
                 # Doesn't hurt to close twice (just in case we got here via an exception
                 conn.close()
 
-            process = multiprocessing.Process(target=handle, args=(data,))
-            process.daemon = True
-            process.start()
+            if self.data[0:4] == "KILL":
+                self.logger.debug("got KILL message")
+            else:
+                process = multiprocessing.Process(target=handle, args=(self.data,))
+                process.daemon = True
+                process.start()
 
 
 if __name__ == "__main__":
